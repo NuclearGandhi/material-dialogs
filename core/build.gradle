@@ -4,7 +4,6 @@ apply from: '../gradle/dependencies.gradle'
 
 android {
     compileSdkVersion versions.compileSdk
-    buildToolsVersion versions.buildTools
 
     defaultConfig {
         minSdkVersion versions.minSdk
@@ -19,17 +18,24 @@ android {
     }
     sourceSets {
         main.res.srcDirs = [
-            'src/main/res',
-            'src/main/res-public'
+                'src/main/res',
+                'src/main/res-public'
         ]
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
 dependencies {
     implementation 'com.google.code.findbugs:jsr305:' + versions.findBugs
-    implementation 'com.android.support:support-annotations:' + versions.supportLib
-    implementation 'com.android.support:appcompat-v7:' + versions.supportLib
-    implementation 'com.android.support:recyclerview-v7:' + versions.supportLib
+
+    implementation 'com.google.android.material:material:1.0.0'
+    implementation 'androidx.annotation:annotation:' + versions.androidx
+    implementation 'androidx.core:core:' + versions.androidx
+    implementation 'androidx.recyclerview:recyclerview:' + versions.recyclerview
+
     implementation 'me.zhanghai.android.materialprogressbar:library:' + versions.mdProgressBar
 }
 

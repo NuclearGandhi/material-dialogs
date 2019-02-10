@@ -1,15 +1,18 @@
 ext.versions = [
         minSdk            : 14,
-        compileSdk        : 27,
-        buildTools        : '27.0.3',
-        publishVersion    : '0.9.6.0',
-        publishVersionCode: 179,
-        gradlePlugin      : '3.1.1',
-        spotlessPlugin    : '3.10.0',
+        compileSdk        : 28,
+        buildTools        : '28.0.3',
+        publishVersion    : '1.0.0.0beta1',
+        publishVersionCode: 180,
+        gradlePlugin      : '3.3.0',
+        spotlessPlugin    : '3.17.0',
         findBugs          : '3.0.2',
         bintrayRelease    : '0.8.1',
 
-        supportLib        : '27.1.1',
-        mdProgressBar     : '1.4.2',
-        butterKnife       : '8.8.1'
+        androidx          : '1.0.1',
+        recyclerview      : '1.0.0',
+        gridlayout        : '1.0.0',
+
+        mdProgressBar     : '1.6.1',
+        butterKnife       : '10.0.0'
 ]
