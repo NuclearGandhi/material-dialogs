@@ -681,7 +681,9 @@ public class MainActivity extends AppCompatActivity
                     STORAGE_PERMISSION_RC);
             return;
         }
-        new FileChooserDialog.Builder(this).show();
+        new FileChooserDialog.Builder(getSupportFragmentManager())
+                .onFileSelected(this)
+                .show(new FileChooserDialog());
     }
 
     @Override

@@ -11,6 +11,7 @@ import android.os.Environment;
 import android.view.View;
 import android.webkit.MimeTypeMap;
 
+import com.afollestad.materialdialogs.BaseDialogFragment;
 import com.afollestad.materialdialogs.DialogAction;
 import com.afollestad.materialdialogs.MaterialDialog;
 import com.afollestad.materialdialogs.commons.R;
@@ -22,6 +23,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.core.content.ContextCompat;
@@ -33,14 +35,13 @@ import androidx.fragment.app.FragmentManager;
 import static com.afollestad.materialdialogs.util.DialogUtils.checkNotNull;
 
 @SuppressWarnings("unused")
-public class FileChooserDialog extends DialogFragment implements MaterialDialog.ListCallback {
+public class FileChooserDialog extends BaseDialogFragment<FileChooserDialog.Builder> implements MaterialDialog.ListCallback {
 
     private static final String DEFAULT_TAG = "[MD_FILE_SELECTOR]";
 
     private File parentFolder;
     private File[] parentContents;
     private boolean canGoUp = true;
-    private FileCallback callback;
 
     public FileChooserDialog() {
     }
@@ -48,13 +49,13 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
     CharSequence[] getContentsArray() {
         if (parentContents == null) {
             if (canGoUp) {
-                return new String[]{getBuilder().goUpLabel};
+                return new String[]{mBuilder.goUpLabel};
             }
             return new String[]{};
         }
         String[] results = new String[parentContents.length + (canGoUp ? 1 : 0)];
         if (canGoUp) {
-            results[0] = getBuilder().goUpLabel;
+            results[0] = mBuilder.goUpLabel;
         }
         for (int i = 0; i < parentContents.length; i++) {
             results[canGoUp ? i + 1 : i] = parentContents[i].getName();
@@ -142,6 +143,12 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
     @SuppressWarnings("ConstantConditions")
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
+        super.onCreateDialog(savedInstanceState);
+        setArguments(new Bundle());
+        if (!getArguments().containsKey("current_path")) {
+            getArguments().putString("current_path", mBuilder.initialPath);
+        }
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
                 && ContextCompat.checkSelfPermission(
                 getActivity(), Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -153,37 +160,26 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
                     .build();
         }
 
-        if (getArguments() == null || !getArguments().containsKey("builder")) {
-            throw new IllegalStateException("You must create a FileChooserDialog using the Builder.");
-        }
-        if (!getArguments().containsKey("current_path")) {
-            getArguments().putString("current_path", getBuilder().initialPath);
-        }
         parentFolder = new File(getArguments().getString("current_path"));
         checkIfCanGoUp();
-        parentContents = listFiles(getBuilder().mimeType, getBuilder().extensions);
+        parentContents = listFiles(mBuilder.mimeType, mBuilder.extensions);
         return new MaterialDialog.Builder(getActivity())
                 .title(parentFolder.getAbsolutePath())
-                .typeface(getBuilder().mediumFont, getBuilder().regularFont)
+                .typeface(mBuilder.mediumFont, mBuilder.regularFont)
                 .items(getContentsArray())
                 .itemsCallback(this)
                 .onNegative(
-                        new MaterialDialog.SingleButtonCallback() {
-                            @Override
-                            public void onClick(MaterialDialog dialog, DialogAction which) {
-                                dialog.dismiss();
-                            }
-                        })
+                        (dialog, which) -> dialog.dismiss())
                 .autoDismiss(false)
-                .negativeText(getBuilder().cancelButton)
+                .negativeText(mBuilder.cancelButton)
                 .build();
     }
 
     @Override
     public void onDismiss(DialogInterface dialog) {
         super.onDismiss(dialog);
-        if (callback != null) {
-            callback.onFileChooserDismissed(this);
+        if (mBuilder.callback != null) {
+            mBuilder.callback.onFileChooserDismissed(this);
         }
     }
 
@@ -203,10 +199,10 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
             }
         }
         if (parentFolder.isFile()) {
-            callback.onFileSelection(this, parentFolder);
+            mBuilder.callback.onFileSelection(this, parentFolder);
             dismiss();
         } else {
-            parentContents = listFiles(getBuilder().mimeType, getBuilder().extensions);
+            parentContents = listFiles(mBuilder.mimeType, mBuilder.extensions);
             MaterialDialog dialog = (MaterialDialog) getDialog();
             dialog.setTitle(parentFolder.getAbsolutePath());
             checkNotNull(getArguments(), "arguments")
@@ -223,44 +219,8 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
         }
     }
 
-    @Override
-    public void onAttach(Context context) {
-        super.onAttach(context);
-        if (getActivity() instanceof FileCallback) {
-            callback = (FileCallback) getActivity();
-        } else if (getTargetFragment() instanceof FileCallback) {
-            callback = (FileCallback) getTargetFragment();
-        } else {
-            throw new IllegalStateException(
-                    "FileChooserDialog needs to be shown from an Activity/Fragment implementing FileCallback.");
-        }
-    }
-
-    public void show() {
-        final FragmentManager fragmentManager =
-                getBuilder().fragment != null
-                        ? getBuilder().fragment.getChildFragmentManager()
-                        : getBuilder().activity.getSupportFragmentManager();
-
-        final String tag = getBuilder().tag;
-        Fragment frag = fragmentManager.findFragmentByTag(tag);
-        if (frag != null) {
-            ((DialogFragment) frag).dismiss();
-            fragmentManager.beginTransaction().remove(frag).commit();
-        }
-
-        if (getBuilder().fragment != null) {
-            setTargetFragment(getBuilder().fragment, 65);
-        }
-        show(fragmentManager, tag);
-    }
-
     public String getInitialPath() {
-        return getBuilder().initialPath;
-    }
-
-    private Builder getBuilder() {
-        return (Builder) checkNotNull(getArguments(), "arguments").getSerializable("builder");
+        return mBuilder.initialPath;
     }
 
     public interface FileCallback {
@@ -270,35 +230,36 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
         void onFileChooserDismissed(FileChooserDialog dialog);
     }
 
-    public static class Builder implements Serializable {
+    public static class Builder extends BaseDialogFragment.Builder {
 
         transient FragmentActivity activity;
         transient Fragment fragment;
+
+        FileCallback callback;
 
         @StringRes int cancelButton;
         String initialPath;
         String mimeType;
         String[] extensions;
-        String tag;
         String goUpLabel;
         @Nullable String mediumFont;
         @Nullable String regularFont;
 
-        private Builder() {
+        private void init() {
             cancelButton = android.R.string.cancel;
             initialPath = Environment.getExternalStorageDirectory().getAbsolutePath();
             mimeType = null;
             goUpLabel = "...";
         }
 
-        public <T extends FragmentActivity & FileCallback> Builder(T activity) {
-            this();
-            this.activity = activity;
+        public Builder(FragmentManager fragmentManager) {
+            super(fragmentManager);
+            init();
         }
 
-        public <T extends Fragment & FileCallback> Builder(T fragment) {
-            this();
-            this.fragment = fragment;
+        public Builder onFileSelected(FileCallback callback) {
+            this.callback = callback;
+            return this;
         }
 
         public Builder typeface(@Nullable String medium, @Nullable String regular) {
@@ -341,20 +302,6 @@ public class FileChooserDialog extends DialogFragment implements MaterialDialog.
         public Builder goUpLabel(String text) {
             goUpLabel = text;
             return this;
-        }
-
-        public FileChooserDialog build() {
-            FileChooserDialog dialog = new FileChooserDialog();
-            Bundle args = new Bundle();
-            args.putSerializable("builder", this);
-            dialog.setArguments(args);
-            return dialog;
-        }
-
-        public FileChooserDialog show() {
-            FileChooserDialog dialog = build();
-            dialog.show();
-            return dialog;
         }
     }
 
